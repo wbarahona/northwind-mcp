@@ -1,0 +1,23 @@
+# The chat's model through Docker Model Runner (Docker Desktop 4.40 or later). Compose makes
+# sure Model Runner has the model (pulling it the first time) and gives it a 16k context. On
+# Apple silicon it runs natively, outside Docker's VM, on the Metal GPU.
+#   COMPOSE_FILE=docker-compose.yml:compose.model-runner.yml   (in .env)
+services:
+  agent:
+    environment:
+      LLM_PROVIDER: docker-model-runner
+      # Compose hands the agent the model's URL and name instead.
+      LLM_URL: !reset null
+      LLM_MODEL: !reset null
+    models:
+      llm:
+        endpoint_var: LLM_URL
+        model_var: LLM_MODEL
+
+models:
+  llm:
+    model: ${LLM_MODEL:-hf.co/Qwen/Qwen3-4B-GGUF:Q4_K_M}
+    # Enough for the tools, the prompt, a few rounds of tool results and the history, without
+    # reserving memory for the model's full 40k context. (Compose wants a literal number here,
+    # not a variable.)
+    context_size: 16384

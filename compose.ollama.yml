@@ -1,0 +1,50 @@
+# The chat's model in an Ollama container: runs on any OS with Docker, on the CPU (add
+# compose.ollama-nvidia.yml for an NVIDIA GPU). Docker on macOS has no GPU access, so on a Mac
+# Docker Model Runner is much faster.
+#   COMPOSE_FILE=docker-compose.yml:compose.ollama.yml   (in .env)
+# LLM_MODEL is an Ollama model name (default qwen3:4b). The models are kept in a volume.
+x-ollama-image: &ollama-image ${OLLAMA_IMAGE:-ollama/ollama:latest}
+
+services:
+  ollama:
+    profiles: ['stack']
+    image: *ollama-image
+    environment:
+      # The same context the benchmark used.
+      OLLAMA_CONTEXT_LENGTH: '16384'
+    volumes:
+      - ollama-models:/root/.ollama
+    ports:
+      # This machine only: lets pnpm dev use the same Ollama (LLM_PROVIDER=ollama).
+      - '127.0.0.1:${OLLAMA_PORT:-11434}:11434'
+    healthcheck:
+      test: ['CMD', 'ollama', 'list']
+      interval: 5s
+      timeout: 5s
+      start_period: 10s
+      retries: 20
+    restart: unless-stopped
+
+  # One-off: downloads the model the first time (several GB), then exits.
+  ollama-pull:
+    profiles: ['stack']
+    image: *ollama-image
+    entrypoint: ['ollama', 'pull', '${LLM_MODEL:-qwen3:4b}']
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: 'no'
+
+  agent:
+    environment:
+      LLM_PROVIDER: ollama
+      LLM_URL: http://ollama:11434/v1/
+      LLM_MODEL: ${LLM_MODEL:-qwen3:4b}
+    depends_on:
+      ollama-pull:
+        condition: service_completed_successfully
+
+volumes:
+  ollama-models:

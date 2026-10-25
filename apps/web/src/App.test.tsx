@@ -12,7 +12,11 @@ const CATALOG = {
       inputSchema: { type: 'object' },
     },
   ],
-  llm: { model: 'hf.co/Qwen/Qwen3-8B-GGUF:Q4_K_M', thinking: false },
+  llm: {
+    model: 'hf.co/Qwen/Qwen3-8B-GGUF:Q4_K_M',
+    profile: 'qwen3',
+    thinking: false,
+  },
 };
 
 const ORDER_EVENTS: ChatEvent[] = [
@@ -92,10 +96,8 @@ describe('App', () => {
     fakeAgent();
     render(<App />);
 
-    expect(await screen.findByText('Local model ready')).toBeInTheDocument();
-    expect(
-      screen.getByText('Qwen3-8B via Docker Model Runner · 1 read-only tools'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('Model ready')).toBeInTheDocument();
+    expect(screen.getByText('Qwen3-8B · 1 read-only tool')).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: "What's in order 10248?" }),
     ).toBeEnabled();
@@ -180,7 +182,7 @@ describe('App', () => {
         {
           type: 'error',
           message:
-            'The model server is not reachable. Is Docker Model Runner running?',
+            'The model server is not reachable. Check that it is running and that LLM_URL points to it.',
         },
       ],
     });
@@ -192,7 +194,7 @@ describe('App', () => {
 
     expect(
       await screen.findByText(
-        'The model server is not reachable. Is Docker Model Runner running?',
+        'The model server is not reachable. Check that it is running and that LLM_URL points to it.',
       ),
     ).toBeInTheDocument();
   });

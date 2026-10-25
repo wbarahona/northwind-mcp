@@ -39,7 +39,8 @@ export interface ToolInfo {
 export interface Catalog {
   instructions: string;
   tools: ToolInfo[];
-  llm: { model: string; thinking: boolean };
+  /** The model, its server (LLM_PROVIDER), the agent's profile for it and whether it reasons first. */
+  llm: { model: string; provider?: string; profile: string; thinking: boolean };
 }
 
 export interface Health {
@@ -119,5 +120,5 @@ export function modelName(model: string): string {
     .pop()
     ?.split(':')[0]
     ?.replace(/-gguf$/i, '');
-  return name || 'Local model';
+  return name || 'Model';
 }

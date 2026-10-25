@@ -9,12 +9,16 @@ import { extname, join, normalize, relative, sep } from 'node:path';
 import { type ChatEvent, runChat, type Turn } from './chat';
 import type { LlmClient } from './llm';
 import type { McpCatalog } from './mcp';
+import type { ModelProfile } from './profiles';
 
 export interface AgentServerOptions {
   catalog: McpCatalog;
   llm: LlmClient;
   systemPrompt: string;
+  profile: ModelProfile;
   thinking: boolean;
+  /** The kind of model server (LLM_PROVIDER), for the page. */
+  provider?: string;
   /** The built chat page (index.html + assets). */
   webDir: string;
   /** Is the model server reachable? For /healthz; never throws. */
@@ -110,7 +114,12 @@ export function createAgentServer(options: AgentServerOptions): Server {
         return sendJson(res, 200, {
           instructions: options.catalog.instructions,
           tools: options.catalog.tools,
-          llm: { model: options.llm.model, thinking: options.thinking },
+          llm: {
+            model: options.llm.model,
+            ...(options.provider && { provider: options.provider }),
+            profile: options.profile.name,
+            thinking: options.profile.thinkingSwitch && options.thinking,
+          },
         });
       }
       if (method === 'GET' && pathname === '/healthz') {
@@ -166,6 +175,7 @@ export function createAgentServer(options: AgentServerOptions): Server {
               llm: options.llm,
               toolbox: options.catalog.toolbox,
               systemPrompt: options.systemPrompt,
+              profile: options.profile,
             },
             abort.signal,
           ),

@@ -7,6 +7,7 @@ import { callTool, say, scriptedLlm } from '../test/scripted-llm';
 import type { ChatEvent } from './chat';
 import type { CompletionChunk, LlmClient } from './llm';
 import type { McpCatalog } from './mcp';
+import { PROFILES } from './profiles';
 import { createAgentServer, LIMITS } from './server';
 
 const catalog = (calls: string[] = []): McpCatalog => ({
@@ -68,6 +69,7 @@ async function start(
     catalog: catalog(options.calls),
     llm: options.llm ?? scriptedLlm([[say('Hello.')]]).llm,
     systemPrompt: 'SYSTEM',
+    profile: PROFILES.generic,
     thinking: false,
     webDir: options.webDir ?? webDir,
     checkLlm: () => Promise.resolve(true),
@@ -114,7 +116,7 @@ describe('agent server', () => {
           inputSchema: { type: 'object' },
         },
       ],
-      llm: { model: 'scripted', thinking: false },
+      llm: { model: 'scripted', profile: 'generic', thinking: false },
     });
     expect(await (await fetch(`${t.base}/healthz`)).json()).toEqual({
       status: 'ok',

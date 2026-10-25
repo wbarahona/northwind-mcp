@@ -1,10 +1,11 @@
-# Chat benchmark: a 4B model at about 8 of 9
+# Chat benchmark: a 4B model at about 7.5–8 of 9
 
 How well a small local model answers questions about Northwind through the chat agent and the
 MCP server, and which changes moved the score. Measured with `pnpm chat:bench` on 2026-10-24.
 
-**The result:** Qwen3 4B, a 2.5 GB model running on a laptop, answers **about 8 of 9**
-questions right (8.33 in development, 7.67 in Docker), up from **6.7** at the baseline. Qwen3
+**The result:** Qwen3 4B, a 2.5 GB model running on a laptop, answers **about 7.5–8 of 9**
+questions right (7.7 on average over six runs of the final settings, from 7.0 to 8.33), up
+from **6.7** at the baseline. Qwen3
 8B goes from **8 to 9 of 9**. The gains came from the tool design and the instructions, not
 from a bigger model.
 
@@ -59,14 +60,32 @@ What each change was:
 4. **Temperature 0.2:** no better than the server's default, so it stays unset (the
    `LLM_TEMPERATURE` setting remains).
 5. **Confirmation run in Docker**, with the images the stack ships: **7.67**. The difference
-   from 8.33 is run-to-run variation: with three runs per question, the same settings vary by
-   about half a question, so **4B's honest figure is about 8 of 9**. Its misses are
-   concentrated in question 7 (an order's products).
+   from 8.33 is run-to-run variation, measured below. Its misses are concentrated in question
+   7 (an order's products) and question 2 (the shortfall).
 
 A bug fix also counts here: Qwen3 sometimes writes a follow-up tool call as text in its own
 `<tool_call>` format, which llama.cpp passed on as _reasoning_. The agent saw no call and no
 answer and reported an empty answer; it now runs such calls. That is why 8B's question 7 went
 from failing empty to finding the right order.
+
+## How much the same settings vary
+
+The model server samples with its default temperature, so the same input gives different
+answers from run to run. Four more runs of the final settings, a day later, show how much:
+
+| Run                                             | Right per run |
+| ----------------------------------------------- | ------------- |
+| Final, in Docker                                | 7.0           |
+| Final, in Docker, again                         | 7.33          |
+| Final, development (the code of the runs above) | 8.33          |
+| Final, development, after a refactor            | 7.33          |
+
+The refactor (configurable model servers) left every request to the model byte-identical,
+checked by recording both versions' requests, including tool results, against a fake model
+server. So the spread, 7.0 to 8.33 with three runs per question, is the model's alone. Six
+runs of the final settings average **7.7**, hence "about 7.5–8". The slips are the ones the
+baseline made: a shortfall of 5 given as 15 (question 2), a missing phone number or total, and
+question 7.
 
 ## Question by question, before and after
 
@@ -119,8 +138,10 @@ xychart-beta horizontal
 Generation speed follows memory bandwidth, and laptops differ a lot in it: a base M1 has about
 a third of an M1 Pro's (68 against 200 GB/s). The estimate scales the measurement by 68/200.
 The rule agreed before measuring: 8B becomes the default only if it gets at least one more
-question right on average. It is 0.7 ahead, so **Qwen3 4B is the default**, and 8B is the
-option for machines with 24 GB or more.
+question right on average. On the runs at the time it was 0.7 ahead, so **Qwen3 4B is the
+default**, and 8B is the option for machines with 24 GB or more. Against 4B's later average
+(7.7) the gap is 1.3, but 8B has only one run of the final settings, so the choice stands until
+8B has repeat runs too.
 
 ## Running it yourself
 

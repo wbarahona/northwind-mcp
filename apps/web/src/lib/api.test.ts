@@ -47,7 +47,7 @@ describe('modelName', () => {
   it.each([
     ['hf.co/Qwen/Qwen3-8B-GGUF:Q4_K_M', 'Qwen3-8B'],
     ['ai/qwen3:8B-Q4_K_M', 'qwen3'],
-    ['', 'Local model'],
+    ['', 'Model'],
   ])('%s → %s', (model, name) => {
     expect(modelName(model)).toBe(name);
   });

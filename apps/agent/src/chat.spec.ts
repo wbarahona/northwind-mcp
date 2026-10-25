@@ -3,9 +3,9 @@ import {
   type ChatEvent,
   runChat,
   shrink,
-  textToolCalls,
   type ToolBox,
 } from './chat';
+import { PROFILES, type ModelProfile } from './profiles';
 import { callTool, say, scriptedLlm } from '../test/scripted-llm';
 import type { CompletionChunk, FunctionTool } from './llm';
 
@@ -41,6 +41,7 @@ async function chat(
     history?: { question: string; answer: string }[];
     results?: Record<string, string | Error>;
     maxToolRounds?: number;
+    profile?: ModelProfile;
   } = {},
 ) {
   const { llm, requests } = scriptedLlm(rounds);
@@ -58,6 +59,7 @@ async function chat(
       toolbox,
       systemPrompt: 'SYSTEM',
       maxToolRounds: options.maxToolRounds,
+      profile: options.profile,
       now: () => (clock += 10),
     },
   );
@@ -236,16 +238,18 @@ describe('runChat', () => {
     ]);
   });
 
-  it("runs a tool call written as text in Qwen's format (llama.cpp passes it on as reasoning)", async () => {
-    const leaked =
-      '\n<tool_call>\n{"name": "get_order", "arguments": {"order": "10248"}}\n</tool_call>';
-    const { calls, events, requests } = await chat([
-      [
-        { choices: [{ delta: { reasoning_content: leaked.slice(0, 20) } }] },
-        { choices: [{ delta: { reasoning_content: leaked.slice(20) } }] },
-      ],
-      [say('Three lines.')],
-    ]);
+  const leaked =
+    '\n<tool_call>\n{"name": "get_order", "arguments": {"order": "10248"}}\n</tool_call>';
+  const leakedRound: CompletionChunk[] = [
+    { choices: [{ delta: { reasoning_content: leaked.slice(0, 20) } }] },
+    { choices: [{ delta: { reasoning_content: leaked.slice(20) } }] },
+  ];
+
+  it('runs a tool call written as text, with the qwen3 profile (llama.cpp passes it on as reasoning)', async () => {
+    const { calls, events, requests } = await chat(
+      [leakedRound, [say('Three lines.')]],
+      { profile: PROFILES.qwen3 },
+    );
 
     expect(calls).toEqual([{ name: 'get_order', args: { order: '10248' } }]);
     expect(ofType(events, 'step').map((s) => s.label)).toEqual([
@@ -257,6 +261,14 @@ describe('runChat', () => {
       role: 'tool',
       tool_call_id: 'call_0_0',
     });
+  });
+
+  it('leaves text tool calls alone with the generic profile', async () => {
+    const { calls, events } = await chat([leakedRound]);
+
+    expect(calls).toEqual([]);
+    expect(ofType(events, 'step').map((s) => s.label)).toEqual(['Answer']);
+    expect(ofType(events, 'error')).toHaveLength(1);
   });
 
   it('passes reasoning through separately, and reports speed when the server gives it', async () => {
@@ -314,33 +326,27 @@ describe('shrink', () => {
 });
 
 describe('buildSystemPrompt', () => {
-  it("includes the MCP server's instructions and turns Qwen3's thinking off by default", () => {
+  it("includes the MCP server's instructions and the benchmark rules", () => {
     const prompt = buildSystemPrompt({
       instructions: 'Today is 2026-10-23.',
+      profile: PROFILES.generic,
       thinking: false,
     });
 
     expect(prompt).toContain('Today is 2026-10-23.');
     expect(prompt).toContain('never fill it in yourself');
-    expect(prompt.endsWith('/no_think')).toBe(true);
-    expect(
-      buildSystemPrompt({ instructions: '', thinking: true }),
-    ).not.toContain('/no_think');
+    expect(prompt).not.toContain('/no_think');
   });
-});
 
-describe('textToolCalls', () => {
-  it('reads Qwen-style tool calls from text, ignoring anything that is not one', () => {
-    expect(
-      textToolCalls(
-        'Let me check.\n<tool_call>\n{"name": "find_orders", "arguments": {"customer": "ALFKI"}}\n</tool_call>' +
-          '<tool_call>{"name": "get_order", "arguments": "{\\"order\\":\\"1\\"}"}</tool_call>' +
-          '<tool_call>not json</tool_call><tool_call>{"arguments": {}}</tool_call>',
-      ),
-    ).toEqual([
-      { id: '', name: 'find_orders', arguments: '{"customer":"ALFKI"}' },
-      { id: '', name: 'get_order', arguments: '{"order":"1"}' },
-    ]);
-    expect(textToolCalls('A normal answer with no tool calls.')).toEqual([]);
+  it("ends with the profile's suffix: Qwen3's thinking switch, off by default", () => {
+    const qwen = (thinking: boolean) =>
+      buildSystemPrompt({
+        instructions: '',
+        profile: PROFILES.qwen3,
+        thinking,
+      });
+
+    expect(qwen(false).endsWith(' /no_think')).toBe(true);
+    expect(qwen(true)).not.toContain('/no_think');
   });
 });

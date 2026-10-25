@@ -6,6 +6,14 @@ name: northwind
 #   pnpm stack:seed  → one-off: reset and load Northwind    (profile "seed")
 # ${…} values come from the shell or the repo's .env; containers get only what is listed
 # under `environment`, never the whole .env (it holds host-side settings).
+#
+# This file has no model server. The chat's model comes from one more Compose file, chosen
+# with COMPOSE_FILE in .env (pnpm stack:setup writes it):
+#   compose.model-runner.yml   Docker Model Runner (Docker Desktop; Metal GPU on Apple silicon)
+#   compose.ollama.yml         an Ollama container (any OS; add compose.ollama-nvidia.yml for
+#                              an NVIDIA GPU)
+#   (none)                     any OpenAI-compatible server at STACK_LLM_URL
+# Without COMPOSE_FILE, the agent uses Docker Model Runner's address inside Docker Desktop.
 
 x-build: &build
   context: .
@@ -72,9 +80,8 @@ services:
       retries: 10
     restart: unless-stopped
 
-  # The chat page and agent. It starts the MCP server itself, read-only. The model comes
-  # from the `models:` section below: Docker Model Runner runs it on the Mac (Metal GPU) and
-  # hands the agent its URL and name.
+  # The chat page and agent. It starts the MCP server itself, read-only. Where the model
+  # runs is up to the model server's Compose file (see the top of this file).
   agent:
     profiles: ['stack']
     build:
@@ -84,11 +91,19 @@ services:
     environment:
       NORTHWIND_API_URL: http://api:3000
       NORTHWIND_API_KEY: ${NORTHWIND_API_KEY:?Set NORTHWIND_API_KEY in .env (one of API_KEYS; see .env.example)}
+      LLM_PROVIDER: ${LLM_PROVIDER:-docker-model-runner}
+      # As seen from inside the container. Model server files replace these two; without
+      # one, Docker Model Runner in Docker Desktop is assumed (the rule for older .env files).
+      LLM_URL: ${STACK_LLM_URL:-http://model-runner.docker.internal/engines/v1/}
+      LLM_MODEL: ${LLM_MODEL:-hf.co/Qwen/Qwen3-4B-GGUF:Q4_K_M}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_PROFILE: ${LLM_PROFILE:-}
       LLM_THINKING: ${LLM_THINKING:-0}
-    models:
-      llm:
-        endpoint_var: LLM_URL
-        model_var: LLM_MODEL
+      LLM_TEMPERATURE: ${LLM_TEMPERATURE:-}
+    extra_hosts:
+      # host.docker.internal is this machine on Linux too (Docker Desktop defines it already),
+      # for an OpenAI-compatible server running next to the stack.
+      - 'host.docker.internal:host-gateway'
     ports:
       # This machine only by default. AGENT_BIND=0.0.0.0 shares the chat with the local
       # network: anyone on it can then ask questions (read-only data, no login).
@@ -122,16 +137,6 @@ services:
       mongo:
         condition: service_healthy
     restart: 'no'
-
-# The chat's model. Compose makes sure Docker Model Runner has it (pulling it the first time)
-# and runs it natively on the Mac, outside Docker's VM, so it gets the GPU.
-models:
-  llm:
-    model: ${LLM_MODEL:-hf.co/Qwen/Qwen3-4B-GGUF:Q4_K_M}
-    # Enough for the 14 tools, the prompt, a few rounds of tool results and the history,
-    # without reserving memory for the model's full 40k context. (Compose wants a literal
-    # number here, not a variable.)
-    context_size: 16384
 
 volumes:
   mongo-data:

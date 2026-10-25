@@ -1,6 +1,6 @@
 /**
  * A minimal client for an OpenAI-compatible chat completions endpoint with streaming
- * (Docker Model Runner, llama.cpp, LM Studio, a cloud API later), and the message types
+ * (Docker Model Runner, Ollama, llama.cpp, LM Studio, vLLM, …), and the message types
  * the tool loop uses.
  */
 
@@ -26,7 +26,7 @@ export interface CompletionChunk {
   choices?: {
     delta?: {
       content?: string | null;
-      /** Qwen3's reasoning, when thinking is on (llama.cpp splits it out). */
+      /** The model's reasoning, for models that think (llama.cpp splits it out). */
       reasoning_content?: string | null;
       tool_calls?: {
         index?: number;
@@ -60,6 +60,10 @@ export function createLlmClient(options: {
   /** Base URL ending in "/", e.g. http://localhost:12434/engines/v1/ */
   url: string;
   model: string;
+  /** How errors name the server, e.g. "Ollama". */
+  label?: string;
+  /** Sent as `Authorization: Bearer …` when set. */
+  apiKey?: string;
   /** Sampling temperature; omitted from requests when unset (the server's default applies). */
   temperature?: number;
   fetch?: typeof globalThis.fetch;
@@ -74,7 +78,12 @@ export function createLlmClient(options: {
       try {
         res = await fetchFn(endpoint, {
           method: 'POST',
-          headers: { 'content-type': 'application/json' },
+          headers: {
+            'content-type': 'application/json',
+            ...(options.apiKey && {
+              authorization: `Bearer ${options.apiKey}`,
+            }),
+          },
           body: JSON.stringify({
             model: options.model,
             messages,
@@ -90,7 +99,7 @@ export function createLlmClient(options: {
       } catch (error) {
         if (signal?.aborted) throw error;
         throw new LlmError(
-          `The model server is not reachable at ${options.url}. Is Docker Model Runner running?`,
+          `${capitalize(options.label ?? 'the model server')} is not reachable at ${options.url}. Check that it is running and that LLM_URL points to it.`,
         );
       }
       if (!res.ok || !res.body) {
@@ -162,3 +171,6 @@ function errorMessage(raw: string): string {
     return raw.trim();
   }
 }
+
+const capitalize = (text: string) =>
+  text.charAt(0).toUpperCase() + text.slice(1);

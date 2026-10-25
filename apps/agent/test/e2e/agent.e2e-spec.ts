@@ -4,6 +4,7 @@ import type { AddressInfo } from 'node:net';
 import { buildSystemPrompt, type ChatEvent } from '../../src/chat';
 import { type ChatMessage, createLlmClient } from '../../src/llm';
 import { type McpConnection, startMcp } from '../../src/mcp';
+import { PROFILES } from '../../src/profiles';
 import { createAgentServer } from '../../src/server';
 
 /**
@@ -109,8 +110,10 @@ describe('Agent (e2e)', () => {
       llm: createLlmClient({ url: `${modelUrl}/v1/`, model: 'fake-qwen' }),
       systemPrompt: buildSystemPrompt({
         instructions: mcp.instructions,
+        profile: PROFILES.qwen3,
         thinking: false,
       }),
+      profile: PROFILES.qwen3,
       thinking: false,
       webDir: '/nonexistent',
     });

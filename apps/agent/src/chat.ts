@@ -1,4 +1,5 @@
 import type { ChatMessage, FunctionTool, LlmClient, ToolCall } from './llm';
+import { type ModelProfile, PROFILES } from './profiles';
 
 /** What the page receives, one JSON object per line. */
 export type ChatEvent =
@@ -46,6 +47,8 @@ export interface ChatOptions {
   llm: LlmClient;
   toolbox: ToolBox;
   systemPrompt: string;
+  /** What this model family needs; `generic` when unset. */
+  profile?: ModelProfile;
   /** Rounds that may call tools; one more round without tools forces an answer. */
   maxToolRounds?: number;
   /** Characters of each tool result handed to the model. */
@@ -59,6 +62,7 @@ export const RESULT_BUDGET = 12_000;
 
 export function buildSystemPrompt(options: {
   instructions: string;
+  profile: ModelProfile;
   thinking: boolean;
 }): string {
   return [
@@ -74,8 +78,7 @@ export function buildSystemPrompt(options: {
     'If a tool says nothing matches and suggests a code, call it again with that code.',
     'When asked what an order contains or what someone ordered, give the order code, its products and its total: use get_order, or find_orders with includeLines.',
     'Keep answers short and factual; use a compact Markdown list for several items.',
-    // Qwen3: skip the reasoning phase unless thinking is on (much faster on a laptop).
-    options.thinking ? '' : '/no_think',
+    options.profile.promptSuffix({ thinking: options.thinking }),
   ]
     .filter(Boolean)
     .join(' ');
@@ -94,6 +97,7 @@ export async function runChat(
   const now = options.now ?? (() => performance.now());
   const maxRounds = options.maxToolRounds ?? MAX_TOOL_ROUNDS;
   const budget = options.resultBudget ?? RESULT_BUDGET;
+  const profile = options.profile ?? PROFILES.generic;
 
   const messages: ChatMessage[] = [
     { role: 'system', content: options.systemPrompt },
@@ -145,11 +149,11 @@ export async function runChat(
     }
 
     let requested = calls.filter((c) => c.name);
-    // Qwen3 sometimes writes a follow-up tool call as text in its own format, which llama.cpp
-    // then passes on as reasoning or content instead of a tool call. Run those too, rather
-    // than ending the chat with an empty answer.
+    // Some models write a tool call as text in their own format, which the server then passes
+    // on as reasoning or content. Their profile reads those, so they run instead of ending the
+    // chat with an empty answer.
     if (requested.length === 0) {
-      const fromText = textToolCalls(`${content}\n${reasoning}`);
+      const fromText = profile.textToolCalls(`${content}\n${reasoning}`);
       if (fromText.length) {
         requested = fromText;
         content = '';
@@ -305,35 +309,4 @@ function listIn(data: unknown): unknown[] | undefined {
     }
   }
   return undefined;
-}
-
-/**
- * Tool calls a model wrote as text in Qwen's format instead of as structured calls:
- *   <tool_call>{"name": "find_orders", "arguments": {"customer": "ALFKI"}}</tool_call>
- * Blocks that aren't valid JSON with a name are ignored.
- */
-export function textToolCalls(
-  text: string,
-): { id: string; name: string; arguments: string }[] {
-  const calls: { id: string; name: string; arguments: string }[] = [];
-  for (const match of text.matchAll(
-    /<tool_call>\s*([\s\S]*?)\s*<\/tool_call>/g,
-  )) {
-    try {
-      const parsed = JSON.parse(match[1] ?? '') as {
-        name?: unknown;
-        arguments?: unknown;
-      };
-      if (typeof parsed.name !== 'string' || !parsed.name) continue;
-      const args = parsed.arguments ?? {};
-      calls.push({
-        id: '',
-        name: parsed.name,
-        arguments: typeof args === 'string' ? args : JSON.stringify(args),
-      });
-    } catch {
-      // Not a tool call after all.
-    }
-  }
-  return calls;
 }

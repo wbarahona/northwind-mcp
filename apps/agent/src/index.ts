@@ -1,15 +1,17 @@
 import { buildSystemPrompt } from './chat';
-import { ConfigError, loadConfig } from './config';
+import { ConfigError, loadConfig, PROVIDER_DEFAULTS } from './config';
 import { createLlmClient } from './llm';
+import { profileFor } from './profiles';
 import { startMcp } from './mcp';
 import { createAgentServer } from './server';
 
 const log = (message: string) => console.log(`[agent] ${message}`);
 
 /** Is the model server up? A quick look at its model list; never throws. */
-async function llmReachable(llmUrl: string): Promise<boolean> {
+async function llmReachable(llmUrl: string, apiKey?: string): Promise<boolean> {
   try {
     const res = await fetch(new URL('models', llmUrl), {
+      headers: apiKey ? { authorization: `Bearer ${apiKey}` } : {},
       signal: AbortSignal.timeout(1500),
     });
     return res.ok;
@@ -35,9 +37,14 @@ async function main(): Promise<void> {
     process.exit(1);
   });
 
+  const profile = profileFor(config.llmModel, config.llmProfile);
+  const thinking = profile.thinkingSwitch && config.llmThinking;
+  const provider = PROVIDER_DEFAULTS[config.llmProvider].label;
   const llm = createLlmClient({
     url: config.llmUrl,
     model: config.llmModel,
+    label: provider,
+    apiKey: config.llmApiKey,
     temperature: config.llmTemperature,
   });
   const server = createAgentServer({
@@ -45,11 +52,14 @@ async function main(): Promise<void> {
     llm,
     systemPrompt: buildSystemPrompt({
       instructions: mcp.instructions,
-      thinking: config.llmThinking,
+      profile,
+      thinking,
     }),
-    thinking: config.llmThinking,
+    profile,
+    thinking,
     webDir: config.webDir,
-    checkLlm: () => llmReachable(config.llmUrl),
+    provider: config.llmProvider,
+    checkLlm: () => llmReachable(config.llmUrl, config.llmApiKey),
   });
 
   server.listen(config.port, config.host, () => {
@@ -58,14 +68,19 @@ async function main(): Promise<void> {
     );
     log(`${mcp.tools.length} read-only MCP tools; API at ${config.apiUrl}`);
     log(
-      `model ${config.llmModel} at ${config.llmUrl}${config.llmThinking ? ' (thinking on)' : ''}`,
+      `model ${config.llmModel} on ${provider} at ${config.llmUrl}, profile ${profile.name}${thinking ? ', thinking on' : ''}`,
     );
+    if (config.llmThinking && !profile.thinkingSwitch) {
+      log(
+        `LLM_THINKING=1 has no effect: the ${profile.name} profile has no thinking switch`,
+      );
+    }
     if (config.host === '0.0.0.0') {
       log(
         'listening on all interfaces: anyone on this network can use the chat (read-only, no login)',
       );
     }
-    void llmReachable(config.llmUrl).then((up) => {
+    void llmReachable(config.llmUrl, config.llmApiKey).then((up) => {
       if (!up)
         log(
           'the model server is not reachable yet; chats will say so until it is (the page shows "Model server offline")',

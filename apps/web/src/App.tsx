@@ -59,7 +59,7 @@ export function App() {
   }, [chat.messages]);
 
   const ready = connection.state === 'ready';
-  const model = ready ? modelName(connection.catalog.llm.model) : 'Local model';
+  const model = ready ? modelName(connection.catalog.llm.model) : 'Model';
 
   const ask = async (question: string) => {
     if (chat.busy || !ready) return;
@@ -98,12 +98,12 @@ export function App() {
       : connection.state === 'error'
         ? ['error', 'Agent unreachable']
         : connection.llmUp
-          ? ['ready', 'Local model ready']
+          ? ['ready', 'Model ready']
           : ['error', 'Model server offline'];
 
   const subtitle =
     connection.state === 'ready'
-      ? `${model} via Docker Model Runner · ${connection.catalog.tools.length} read-only tools`
+      ? `${model} · ${toolCount(connection.catalog.tools.length)}`
       : connection.state === 'error'
         ? `Can't reach the agent: ${connection.message}`
         : 'Northwind MCP tools';
@@ -129,3 +129,5 @@ export function App() {
     </>
   );
 }
+
+const toolCount = (n: number) => `${n} read-only ${n === 1 ? 'tool' : 'tools'}`;

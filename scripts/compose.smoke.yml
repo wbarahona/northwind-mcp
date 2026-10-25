@@ -1,9 +1,8 @@
-# Overrides for pnpm stack:smoke: the throwaway stack runs without a model, so the smoke
+# Overrides for pnpm stack:smoke: the throwaway stack runs without a model server, so the smoke
 # test doesn't depend on one being installed. The agent gets a URL nothing listens on, and
 # must answer that the model server is not reachable.
 services:
   agent:
-    models: !reset {}
     environment:
       LLM_URL: http://127.0.0.1:9/v1/
       LLM_MODEL: no-model

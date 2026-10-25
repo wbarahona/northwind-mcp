@@ -73,11 +73,16 @@ describe('createLlmClient', () => {
     });
 
   it('posts a streaming request, with tools only when there are some', async () => {
-    const requests: { url: string; body: Record<string, unknown> }[] = [];
+    const requests: {
+      url: string;
+      body: Record<string, unknown>;
+      headers: Record<string, string>;
+    }[] = [];
     const fetch = (async (url: URL, init: RequestInit) => {
       requests.push({
         url: String(url),
         body: JSON.parse(init.body as string),
+        headers: init.headers as Record<string, string>,
       });
       return sse(
         'data: {"choices":[{"delta":{"content":"ok"}}]}\n\ndata: [DONE]\n\n',
@@ -103,6 +108,7 @@ describe('createLlmClient', () => {
 
     expect(requests[0]).toEqual({
       url: 'http://llm.test/engines/v1/chat/completions',
+      headers: { 'content-type': 'application/json' },
       body: {
         model: 'qwen3',
         messages: [{ role: 'user', content: 'hi' }],
@@ -118,16 +124,26 @@ describe('createLlmClient', () => {
       url: 'http://llm.test/engines/v1/',
       model: 'qwen3',
       temperature: 0.2,
+      apiKey: 'sk-test',
       fetch,
     });
     await collect(warm.stream({ messages: [{ role: 'user', content: 'hi' }] }));
     expect(requests[2]!.body).toMatchObject({ temperature: 0.2 });
+    expect(requests[2]!.headers).toMatchObject({
+      authorization: 'Bearer sk-test',
+    });
   });
 
   it('explains an HTTP error and an unreachable server', async () => {
     const refused = createLlmClient({
       url: 'http://llm.test/v1/',
       model: 'm',
+      fetch: () => Promise.reject(new TypeError('fetch failed')),
+    });
+    const ollama = createLlmClient({
+      url: 'http://localhost:11434/v1/',
+      model: 'm',
+      label: 'Ollama',
       fetch: () => Promise.reject(new TypeError('fetch failed')),
     });
     const notFound = createLlmClient({
@@ -138,7 +154,10 @@ describe('createLlmClient', () => {
     const messages = [{ role: 'user' as const, content: 'hi' }];
 
     await expect(collect(refused.stream({ messages }))).rejects.toThrow(
-      'The model server is not reachable at http://llm.test/v1/. Is Docker Model Runner running?',
+      'The model server is not reachable at http://llm.test/v1/. Check that it is running and that LLM_URL points to it.',
+    );
+    await expect(collect(ollama.stream({ messages }))).rejects.toThrow(
+      'Ollama is not reachable at http://localhost:11434/v1/.',
     );
     await expect(collect(notFound.stream({ messages }))).rejects.toThrow(
       'The model server answered 404: model "m" not found',

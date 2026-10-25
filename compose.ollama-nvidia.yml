@@ -1,0 +1,12 @@
+# Gives the Ollama container the NVIDIA GPUs (Linux, or Windows with WSL2; needs the NVIDIA
+# Container Toolkit). Use it after compose.ollama.yml:
+#   COMPOSE_FILE=docker-compose.yml:compose.ollama.yml:compose.ollama-nvidia.yml   (in .env)
+services:
+  ollama:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
