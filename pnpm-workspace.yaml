@@ -1,0 +1,12 @@
+packages:
+  - apps/*
+  - packages/*
+allowBuilds:
+  '@parcel/watcher': false
+  '@scarf/scarf': false
+  mongodb-memory-server: false
+  unrs-resolver: false
+peerDependencyRules:
+  allowedVersions:
+    # Generates correct types with TypeScript 6; packages/api-client's openapi:check guards it.
+    openapi-typescript>typescript: '6'

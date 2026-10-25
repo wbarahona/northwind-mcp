@@ -1,0 +1,47 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "ui": "tui",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"]
+    },
+    "typecheck": {
+      "dependsOn": ["^build"]
+    },
+    "lint": {
+      "dependsOn": ["^build"]
+    },
+    "test": {
+      "dependsOn": ["^build"]
+    },
+    "dev": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "persistent": true
+    },
+    "test:e2e": {
+      "dependsOn": ["^build"],
+      "cache": false
+    },
+    "seed": {
+      "dependsOn": ["build"],
+      "cache": false,
+      "passThroughEnv": ["MONGO_URI", "SEED_ANCHOR_DATE"]
+    },
+    "openapi": {
+      "dependsOn": ["build"],
+      "outputs": ["openapi.json"],
+      "cache": false
+    },
+    "openapi:check": {
+      "dependsOn": ["build"],
+      "cache": false
+    },
+    "@northwind/api-client#openapi": {
+      "dependsOn": ["@northwind/api#openapi"],
+      "outputs": ["src/schema.ts"],
+      "cache": false
+    }
+  }
+}

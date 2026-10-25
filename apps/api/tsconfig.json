@@ -1,0 +1,9 @@
+{
+  "extends": "@northwind/tsconfig/nestjs.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": ".",
+    "types": ["node", "jest"]
+  },
+  "include": ["src", "test"]
+}

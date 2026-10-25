@@ -1,0 +1,6 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "ask": ["mcp__northwind__ship_order", "mcp__northwind__remove_order_line"]
+  }
+}

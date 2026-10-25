@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "NestJS app",
+  "extends": "./base.json",
+  "compilerOptions": {
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    // Decorated DTO / schema class properties are assigned by Nest and Mongoose, not constructors.
+    "strictPropertyInitialization": false,
+    "declaration": false,
+    "incremental": true
+  }
+}

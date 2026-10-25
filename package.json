@@ -1,0 +1,41 @@
+{
+  "name": "northwind-modern",
+  "private": true,
+  "description": "Modern MongoDB + NestJS take on the classic Northwind Traders database, built as the base for an MCP server.",
+  "packageManager": "pnpm@12.15.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:e2e": "turbo run test:e2e",
+    "seed": "turbo run seed --ui=stream",
+    "openapi": "turbo run openapi --ui=stream",
+    "openapi:check": "turbo run openapi:check --ui=stream",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:up": "docker compose up -d --wait",
+    "db:down": "docker compose --profile '*' down",
+    "db:logs": "docker compose logs -f mongo",
+    "db:shell": "docker compose exec mongo mongosh northwind",
+    "stack:doctor": "bash scripts/doctor.sh",
+    "stack:setup": "bash scripts/setup.sh",
+    "stack:up": "docker compose --profile stack up -d --build --wait",
+    "stack:seed": "docker compose run --rm --build seed",
+    "stack:logs": "docker compose logs -f api",
+    "stack:smoke": "bash scripts/stack-smoke.sh",
+    "chat:bench": "node scripts/chat-bench.mjs",
+    "stack:down": "docker compose --profile '*' down"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "eslint": "^10.13.0",
+    "prettier": "^3.9.10",
+    "turbo": "^2.11.10",
+    "typescript": "~6.0.3"
+  }
+}

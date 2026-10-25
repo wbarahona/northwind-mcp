@@ -1,0 +1,18 @@
+node_modules/
+dist/
+coverage/
+.turbo/
+*.tsbuildinfo
+*.log
+
+.env
+.env.*
+!.env.example
+
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# pnpm chat:bench output (full model answers)
+bench-results/

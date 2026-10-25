@@ -1,0 +1,60 @@
+{
+  "name": "@northwind/mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MCP server that lets an AI assistant work with the Northwind API",
+  "main": "./dist/index.js",
+  "bin": {
+    "northwind-mcp": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
+    "start": "node dist/index.js",
+    "inspect": "pnpm dlx @modelcontextprotocol/inspector@2.12.0 node --env-file-if-exists=../../.env dist/index.js",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-vm-modules --disable-warning=ExperimentalWarning ./node_modules/jest/bin/jest.js",
+    "test:e2e": "node --experimental-vm-modules --disable-warning=ExperimentalWarning ./node_modules/jest/bin/jest.js --config test/e2e/jest-e2e.json --runInBand"
+  },
+  "jest": {
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
+    "rootDir": ".",
+    "testRegex": ".*\\.spec\\.ts$",
+    "transform": {
+      "^.+\\.ts$": "ts-jest"
+    },
+    "testEnvironment": "node",
+    "roots": [
+      "<rootDir>/src",
+      "<rootDir>/test"
+    ],
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "<rootDir>/test/e2e/"
+    ]
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "@northwind/api-client": "workspace:*",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@northwind/e2e-stack": "workspace:*",
+    "@northwind/eslint-config": "workspace:*",
+    "@northwind/tsconfig": "workspace:*",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.19.2",
+    "eslint": "^10.13.0",
+    "jest": "^30.5.2",
+    "ts-jest": "^29.4.15",
+    "typescript": "~6.0.3"
+  }
+}

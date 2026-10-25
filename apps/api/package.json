@@ -1,0 +1,83 @@
+{
+  "name": "@northwind/api",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Northwind REST + OpenAPI API (NestJS, MongoDB)",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "nest build",
+    "dev": "nest start --watch",
+    "start": "node dist/main",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-vm-modules --disable-warning=ExperimentalWarning ./node_modules/jest/bin/jest.js",
+    "test:cov": "node --experimental-vm-modules --disable-warning=ExperimentalWarning ./node_modules/jest/bin/jest.js --coverage",
+    "test:e2e": "node --experimental-vm-modules --disable-warning=ExperimentalWarning ./node_modules/jest/bin/jest.js --config test/jest-e2e.json --runInBand",
+    "openapi": "node dist/openapi-export.js",
+    "openapi:check": "node dist/openapi-export.js --check"
+  },
+  "dependencies": {
+    "@nestjs/common": "^12.2.0",
+    "@nestjs/config": "^12.0.1",
+    "@nestjs/core": "^12.2.0",
+    "@nestjs/mongoose": "^12.0.0",
+    "@nestjs/platform-express": "^12.2.0",
+    "@nestjs/swagger": "^12.0.2",
+    "@nestjs/terminus": "^12.1.0",
+    "@nestjs/throttler": "^6.7.1",
+    "@northwind/db": "workspace:*",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
+    "mongoose": "^9.11.3",
+    "nestjs-pino": "^5.3.1",
+    "pino": "^10.4.0",
+    "pino-http": "^11.0.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^12.0.10",
+    "@nestjs/schematics": "^12.0.10",
+    "@nestjs/testing": "^12.2.0",
+    "@northwind/api-client": "workspace:*",
+    "@northwind/eslint-config": "workspace:*",
+    "@northwind/seed": "workspace:*",
+    "@northwind/tsconfig": "workspace:*",
+    "@types/express": "^5.0.6",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.19.2",
+    "@types/supertest": "^7.2.1",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "eslint": "^10.13.0",
+    "jest": "^30.5.2",
+    "mongodb-memory-server": "^11.3.0",
+    "pino-pretty": "^13.2.0",
+    "supertest": "^7.3.1",
+    "ts-jest": "^29.4.15",
+    "typescript": "~6.0.3"
+  },
+  "jest": {
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
+    "rootDir": "src",
+    "testRegex": ".*\\.spec\\.ts$",
+    "transform": {
+      "^.+\\.ts$": "ts-jest"
+    },
+    "collectCoverageFrom": [
+      "**/*.ts",
+      "!main.ts"
+    ],
+    "coverageDirectory": "../coverage",
+    "testEnvironment": "node",
+    "setupFiles": [
+      "reflect-metadata"
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+pnpm-lock.yaml
+dist/
+coverage/
+.turbo/
+packages/seed/data/raw/*.json
+apps/api/openapi.json
+packages/api-client/src/schema.ts
+
+# Written by Claude Code; personal and git-ignored.
+.claude/settings.local.json

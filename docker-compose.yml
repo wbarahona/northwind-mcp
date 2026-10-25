@@ -1,0 +1,137 @@
+name: northwind
+
+# Profiles keep the development workflow as it was:
+#   pnpm db:up       → mongo only (for pnpm dev)
+#   pnpm stack:up    → mongo + api + agent (chat on :5173)   (profile "stack")
+#   pnpm stack:seed  → one-off: reset and load Northwind    (profile "seed")
+# ${…} values come from the shell or the repo's .env; containers get only what is listed
+# under `environment`, never the whole .env (it holds host-side settings).
+
+x-build: &build
+  context: .
+  args:
+    NODE_IMAGE: ${NODE_IMAGE:-node:24-alpine}
+
+# Containers reach the replica set directly: it is initiated with the member host
+# localhost:27017 (so the host and Compass can use ?replicaSet=rs0), which a container
+# would resolve to itself.
+# MONGO_DB picks another database on the same Mongo (the smoke test uses its own).
+x-mongo-uri: &mongo-uri mongodb://mongo:27017/${MONGO_DB:-northwind}?directConnection=true
+
+services:
+  mongo:
+    image: ${MONGO_IMAGE:-mongo:8}
+    # Single-node replica set: needed for transactions and change streams.
+    command: ['--replSet', 'rs0', '--bind_ip_all']
+    ports:
+      # Bound to localhost only; there is no auth on this local instance.
+      - '127.0.0.1:${MONGO_PORT:-27017}:27017'
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      # Initiates the replica set on first start, then reports healthy once this node is primary.
+      test:
+        - CMD
+        - mongosh
+        - --quiet
+        - --eval
+        - "try { rs.status() } catch (e) { rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'localhost:27017' }] }) }; quit(db.hello().isWritablePrimary ? 0 : 1)"
+      interval: 5s
+      timeout: 10s
+      start_period: 10s
+      retries: 20
+    restart: unless-stopped
+
+  api:
+    profiles: ['stack']
+    build:
+      <<: *build
+      target: api
+    image: northwind/api:local
+    environment:
+      MONGO_URI: *mongo-uri
+      PORT: '3000'
+      API_KEYS: ${API_KEYS:?Set API_KEYS in .env (see .env.example)}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      # Same port as pnpm dev, so .mcp.json and Swagger work unchanged: run one or the other.
+      - '127.0.0.1:${API_PORT:-3000}:3000'
+    depends_on:
+      mongo:
+        condition: service_healthy
+    healthcheck:
+      # /health includes the database, so healthy means ready to serve.
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
+      interval: 5s
+      timeout: 5s
+      start_period: 15s
+      retries: 10
+    restart: unless-stopped
+
+  # The chat page and agent. It starts the MCP server itself, read-only. The model comes
+  # from the `models:` section below: Docker Model Runner runs it on the Mac (Metal GPU) and
+  # hands the agent its URL and name.
+  agent:
+    profiles: ['stack']
+    build:
+      <<: *build
+      target: agent
+    image: northwind/agent:local
+    environment:
+      NORTHWIND_API_URL: http://api:3000
+      NORTHWIND_API_KEY: ${NORTHWIND_API_KEY:?Set NORTHWIND_API_KEY in .env (one of API_KEYS; see .env.example)}
+      LLM_THINKING: ${LLM_THINKING:-0}
+    models:
+      llm:
+        endpoint_var: LLM_URL
+        model_var: LLM_MODEL
+    ports:
+      # This machine only by default. AGENT_BIND=0.0.0.0 shares the chat with the local
+      # network: anyone on it can then ask questions (read-only data, no login).
+      - '${AGENT_BIND:-127.0.0.1}:${AGENT_PORT:-5173}:5173'
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:5173/healthz').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
+      interval: 5s
+      timeout: 5s
+      start_period: 15s
+      retries: 10
+    restart: unless-stopped
+
+  seed:
+    profiles: ['seed']
+    build:
+      <<: *build
+      target: seed
+    image: northwind/seed:local
+    environment:
+      MONGO_URI: *mongo-uri
+      # Empty means today; set it (shell or .env) for a reproducible date shift.
+      SEED_ANCHOR_DATE: ${SEED_ANCHOR_DATE:-}
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: 'no'
+
+# The chat's model. Compose makes sure Docker Model Runner has it (pulling it the first time)
+# and runs it natively on the Mac, outside Docker's VM, so it gets the GPU.
+models:
+  llm:
+    model: ${LLM_MODEL:-hf.co/Qwen/Qwen3-4B-GGUF:Q4_K_M}
+    # Enough for the 14 tools, the prompt, a few rounds of tool results and the history,
+    # without reserving memory for the model's full 40k context. (Compose wants a literal
+    # number here, not a variable.)
+    context_size: 16384
+
+volumes:
+  mongo-data:

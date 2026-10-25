@@ -1,0 +1,56 @@
+{
+  "name": "@northwind/agent",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Chat agent: runs a local LLM's tool loop over the Northwind MCP server (read-only) and serves the chat page",
+  "main": "./dist/index.js",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "node scripts/dev.mjs",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-vm-modules --disable-warning=ExperimentalWarning ./node_modules/jest/bin/jest.js",
+    "start": "node dist/index.js",
+    "test:e2e": "node --experimental-vm-modules --disable-warning=ExperimentalWarning ./node_modules/jest/bin/jest.js --config test/e2e/jest-e2e.json --runInBand"
+  },
+  "jest": {
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
+    "rootDir": ".",
+    "testRegex": ".*\\.spec\\.ts$",
+    "transform": {
+      "^.+\\.ts$": "ts-jest"
+    },
+    "testEnvironment": "node",
+    "roots": [
+      "<rootDir>/src",
+      "<rootDir>/test"
+    ],
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "<rootDir>/test/e2e/"
+    ]
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "@northwind/mcp": "workspace:*",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@northwind/e2e-stack": "workspace:*",
+    "@northwind/eslint-config": "workspace:*",
+    "@northwind/tsconfig": "workspace:*",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.19.2",
+    "eslint": "^10.13.0",
+    "jest": "^30.5.2",
+    "ts-jest": "^29.4.15",
+    "typescript": "~6.0.3"
+  }
+}

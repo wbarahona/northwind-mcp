@@ -1,0 +1,19 @@
+# Built inside the image, or not needed there.
+**/node_modules
+**/dist
+**/coverage
+**/.turbo
+**/*.tsbuildinfo
+**/*.log
+
+# Never in an image: secrets and personal settings come from the environment at run time.
+.env
+.env.*
+!.env.example
+.claude
+.mcp.json
+
+.git
+.DS_Store
+.idea
+.vscode

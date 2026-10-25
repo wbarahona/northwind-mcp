@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "northwind": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["--env-file-if-exists=.env", "apps/mcp/dist/index.js"]
+    }
+  }
+}
