@@ -19,6 +19,45 @@ describe('Markdown', () => {
     );
   });
 
+  it('renders a table with alignment, inline formatting and missing cells', () => {
+    expect(
+      html(
+        'Top customers:\n| Customer | Revenue |\n|---|--:|\n| **QUICK** | 1.00 |\n| `ERNSH` |\nDone.',
+      ),
+    ).toBe(
+      '<p>Top customers:</p><div class="table-wrap"><table>' +
+        '<thead><tr><th>Customer</th><th class="align-right">Revenue</th></tr></thead>' +
+        '<tbody><tr><td><strong>QUICK</strong></td><td class="align-right">1.00</td></tr>' +
+        '<tr><td><code>ERNSH</code></td><td class="align-right"></td></tr></tbody>' +
+        '</table></div><p>Done.</p>',
+    );
+  });
+
+  it('accepts tables without outer pipes and keeps escaped pipes literal', () => {
+    expect(html('a | b\n:-: | ---\nx \\| y | z')).toBe(
+      '<div class="table-wrap"><table>' +
+        '<thead><tr><th class="align-center">a</th><th>b</th></tr></thead>' +
+        '<tbody><tr><td class="align-center">x | y</td><td>z</td></tr></tbody>' +
+        '</table></div>',
+    );
+  });
+
+  it('leaves pipes as text when no separator row follows', () => {
+    expect(html('| still streaming |')).toBe('<p>| still streaming |</p>');
+  });
+
+  it('turns <br> into a line break, in table cells and text, but no other tag', () => {
+    expect(
+      html('| Top |\n|---|\n| 1. Chai <br> 2. Chang<BR/>3. **Ikura<br />x** |'),
+    ).toBe(
+      '<div class="table-wrap"><table><thead><tr><th>Top</th></tr></thead><tbody><tr><td>' +
+        '1. Chai <br> 2. Chang<br>3. <strong>Ikura<br>x</strong></td></tr></tbody></table></div>',
+    );
+    expect(html('a<br>b `<br>` <b>c</b>')).toBe(
+      '<p>a<br>b <code>&lt;br&gt;</code> &lt;b&gt;c&lt;/b&gt;</p>',
+    );
+  });
+
   it('keeps code literal (no bold inside it)', () => {
     expect(html('`**not bold**`')).toBe('<p><code>**not bold**</code></p>');
   });

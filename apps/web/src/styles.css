@@ -219,6 +219,35 @@ h1 {
   padding: 1px 4px;
   border-radius: 4px;
 }
+.bubble .table-wrap {
+  overflow-x: auto;
+  margin: 4px 0 8px;
+}
+.bubble .table-wrap:last-child {
+  margin-bottom: 0;
+}
+.bubble table {
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.bubble th,
+.bubble td {
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: normal;
+}
+.bubble th {
+  background: var(--surface-2);
+  font-weight: 600;
+}
+.bubble .align-center {
+  text-align: center;
+}
+.bubble .align-right {
+  text-align: right;
+}
 .bubble.error {
   border-color: var(--bad);
   color: var(--bad);
