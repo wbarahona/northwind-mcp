@@ -4,6 +4,8 @@ The classic **Northwind Traders** database rebuilt as a modern REST/OpenAPI API 
 NestJS, wrapped in an **MCP server** so AI assistants can work with it, and a chat page where a
 **small local model** answers questions about the business through that server.
 
+**Just want to try it?** [docs/quickstart.md](docs/quickstart.md): clone, two commands, chat.
+
 ```mermaid
 flowchart LR
   page["Chat page<br/>(apps/web, React)"] -->|"/api/chat, streamed"| agent["Chat agent<br/>(apps/agent)"]
